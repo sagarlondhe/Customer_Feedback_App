@@ -7,5 +7,6 @@ router.post("/updateFeedback", feedbackcontroller.updateFeedback);
 router.post("/deleteFeedback", feedbackcontroller.deleteFeedback);
 router.post("/getFeedback", feedbackcontroller.getFeedback);
 router.post("/getAllFeedback", feedbackcontroller.getAllFeedback);
+router.get("/getfeedbackByUserId", feedbackcontroller.getFeedbackByUserId);
 
 module.exports = router;

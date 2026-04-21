@@ -1,6 +1,7 @@
 const Feedback = require("../model/feedback.model.js");
 const bcrypt =  require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const user = require("../model/user.model.js");
 
 module.exports = {
     addFeedback: async (req, res) => {
@@ -13,9 +14,19 @@ module.exports = {
             });
             }
 
+        const userId = await user.findOne({ username: username }).select("_id");
+        if (!userId) {
+            return res.status(404).json({
+                message: "User not found.",
+                success: false,
+            });
+        }
+
+
         const newFeedback = await Feedback.create({
             feedback,
-            username
+            username,
+            userId: userId._id,
         });
         return res.status(200).json({
             message: "Feedback added successfully.",
@@ -139,6 +150,31 @@ module.exports = {
                 success: false,
             });
         }   
+    },
+
+    getFeedbackByUserId: async (req, res) => {
+        try {
+            const { userId } = req.query;
+            if (!userId) {
+                return res.status(400).json({
+                    message: "User ID is required.",
+                    success: false,
+                });
+            }
+
+            const feedbacks = await Feedback.find({ userId: userId });
+            return res.status(200).json({
+                message: "Feedback retrieved successfully.",
+                success: true,
+                data: feedbacks
+            });
+        }
+        catch (error) {
+            return res.status(500).json({
+                message: "Internal server error.",
+                success: false,
+            });
+        }
     },
 }
 
