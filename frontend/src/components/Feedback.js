@@ -12,6 +12,8 @@ const Feedback = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 5;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,7 +30,7 @@ const Feedback = () => {
   const fetchUserFeedbacks = async () => {
     try {
       const response = await feedbackAPI.getAllFeedback();
-      const userFeedbacks = response.data.data; //?.filter(f => f._id === user._id) || [];
+      const userFeedbacks = response.data.data;
       setFeedbacks(userFeedbacks);
     } catch (err) {
       setError('Failed to fetch feedbacks');
@@ -63,7 +65,7 @@ const Feedback = () => {
       }
       
       setFormData({ feedback: '' });
-      fetchUserFeedbacks(user._id);
+      fetchUserFeedbacks();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save feedback');
     } finally {
@@ -87,11 +89,44 @@ const Feedback = () => {
     if (window.confirm('Are you sure you want to delete this feedback?')) {
       try {
         await feedbackAPI.deleteFeedback(feedbackId);
-        fetchUserFeedbacks(user._id);
+        fetchUserFeedbacks();
       } catch (err) {
         setError('Failed to delete feedback');
       }
     }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'No date';
+    
+    try {
+      const date = new Date(dateString);
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      return date.toLocaleDateString();
+    } catch (error) {
+      return 'Invalid date';
+    }
+  };
+
+  // Pagination calculations
+  const indexOfLastRecord = currentPage * recordsPerPage;
+  const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+  const currentRecords = feedbacks.slice(indexOfFirstRecord, indexOfLastRecord);
+  const totalPages = Math.ceil(feedbacks.length / recordsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const handlePreviousPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
   };
 
   const handleLogout = async () => {
@@ -145,6 +180,83 @@ const Feedback = () => {
           </form>
         </div>
 
+        <div className="feedback-list-section">
+          <h3>Feedback List</h3>
+          {feedbacks.length === 0 ? (
+            <p className="no-feedback">No feedback available. Be the first to share your thoughts!</p>
+          ) : (
+            <div className="feedback-table-container">
+              <table className="feedback-table">
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Feedback</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentRecords.map((feedback) => (
+                    <tr key={feedback._id}>
+                      <td className="table-username">{feedback.username}</td>
+                      <td className="table-feedback">{feedback.feedback}</td>
+                      <td className="table-date">{formatDate(feedback.created_at)}</td>
+                      <td className="table-actions">
+                        <button 
+                          onClick={() => handleEdit(feedback)} 
+                          className="action-btn edit-btn"
+                          title="Edit feedback"
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(feedback._id)} 
+                          className="action-btn delete-btn"
+                          title="Delete feedback"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="pagination-controls">
+                  <button 
+                    onClick={handlePreviousPage} 
+                    disabled={currentPage === 1}
+                    className="pagination-btn prev-btn"
+                  >
+                    Previous
+                  </button>
+                  
+                  <div className="page-numbers">
+                    {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                      <button
+                        key={pageNumber}
+                        onClick={() => handlePageChange(pageNumber)}
+                        className={`pagination-btn page-btn ${currentPage === pageNumber ? 'active' : ''}`}
+                      >
+                        {pageNumber}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <button 
+                    onClick={handleNextPage} 
+                    disabled={currentPage === totalPages}
+                    className="pagination-btn next-btn"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
